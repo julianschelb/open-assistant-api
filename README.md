@@ -34,6 +34,24 @@ or
 python main.py
 ```
 
+## Usage
+
+```bash
+curl -X 'PUT' \
+  'http://localhost:8080/generate' \
+  -H 'accept: application/json' \
+  -H 'access_token: skbRTWP0oXzRNQFJ7MPXeoYGm08Zswgi' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "prompt": "<|prompter|>Who was Albert Einstein?<|endoftext|><|assistant|>",
+  "max_new_tokens": 20,
+  "typical_p": 0.2,
+  "temperature": 0.6,
+  "num_beams": 2,
+  "num_return_sequences": 2
+}'
+```
+
 ## Additional Resources
 
 - Github: https://github.com/LAION-AI/Open-Assistant
@@ -43,3 +61,4 @@ python main.py
 - Webpage: https://open-assistant.io/dashboard
 - Documentation: https://projects.laion.ai/Open-Assistant/docs/guides/developers
 - API: https://projects.laion.ai/Open-Assistant/api
+- Similar Project: https://github.com/UIUC-Chatbot/ai-teaching-assistant-uiuc/tree/main

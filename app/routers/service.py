@@ -1,17 +1,15 @@
 # ---------------------------------------------------------------------------- #
-#                      Manage Multiple Documents of Corpus                 #
+#                      Language Model Service                 #
 # ---------------------------------------------------------------------------- #
-# This section contains API entpoints for managing documents in a corpus.
+# This section contains API entpoints for generating responses from the model.
 
-from fastapi import APIRouter, Body, status, Depends, Header
+from fastapi import APIRouter, Body, status, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
-from app.schemas.mention import EntityMention, EntityDisambiguated
+from app.schemas.userRequest import UserRequest, SystemResponse
 from app.model import model, tokenizer
 from app.schemas.key import APIKey
 from app.auth import get_api_key
-from typing import Dict, Optional, List
-import json
 
 
 router = APIRouter(responses={404: {"description": "Not Found"}})
@@ -26,7 +24,7 @@ router = APIRouter(responses={404: {"description": "Not Found"}})
 )
 async def getModelInfo(api_key: APIKey = Depends(get_api_key)):
     """
-    Returns model configuration of the model used for entity linking.
+    Returns model configuration of the model.
     """
 
     result = model.config.to_dict()
@@ -66,36 +64,28 @@ async def getTokenizerInfo(api_key: APIKey = Depends(get_api_key)):
 
 @router.put(
     path="/generate",
-    summary="Returns a list of candidate entities.",
-    response_description="List of candidate entities",
-    # response_model=EntityDisambiguated,
+    summary="Returns generated response.",
+    response_description="Returns generated response from the model given the input prompt.",
+    response_model=SystemResponse,
 )
-async def generateResponse(api_key: APIKey = Depends(get_api_key), request=Body({"prompt": "This is a test"})):
+async def generateResponse(api_key: APIKey = Depends(get_api_key), request: UserRequest = Body(...)):
     """
-    Returns a list of candidate entities.
+    Returns generated response from the model given the input prompt.
     """
 
+    # Tokenize input sequence
     input_sequence = tokenizer(
-        # , is_split_into_words=True
-        request.get("prompt"), return_tensors="pt"
+        request.prompt, return_tensors="pt"
     )
-
-    print(input_sequence)
-
-#     # input_sequence.to("cuda")
 
     # Pass input sequence as list into the model
-    outputs = model.generate(
-        **input_sequence,
-        num_beams=5,
-        num_return_sequences=5,
-        # prefix_allowed_tokens_fn=lambda batch_id, sent: trie.get(sent.tolist()),
-    )
+    output = model.generate(**input_sequence, max_new_tokens=request.max_new_tokens, typical_p=request.typical_p, 
+                            temperature=request.temperature, pad_token_id=tokenizer.eos_token_id,
+                            num_beams=request.num_beams, num_return_sequences=request.num_return_sequences)
 
-    print(outputs)
     # Decode model output to obtain entity candidates
-    response = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-    # result = jsonable_encoder(EntityDisambiguated(candidates=candidates))
+    sequences = tokenizer.batch_decode(output, skip_special_tokens=False)
+    response = jsonable_encoder(SystemResponse(sequences=sequences))
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,

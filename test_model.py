@@ -1,14 +1,14 @@
-from transformers import GPT2Tokenizer, GPT2LMHeadModel, AutoTokenizer, AutoModelForCausalLM, AutoModelWithLMHead
+from transformers import GPT2Tokenizer, GPT2LMHeadModel, AutoTokenizer, AutoModelForCausalLM, AutoModelWithLMHead, AutoModel
 
 # tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 # model = GPT2LMHeadModel.from_pretrained('gpt2')
 
 tokenizer = AutoTokenizer.from_pretrained(
-    'OpenAssistant/falcon-7b-sft-mix-2000')
-model = AutoModelWithLMHead.from_pretrained(
-    'OpenAssistant/falcon-7b-sft-mix-2000', trust_remote_code=True)
+    'OpenAssistant/oasst-sft-1-pythia-12b')
+model = AutoModelForCausalLM.from_pretrained(
+    'OpenAssistant/oasst-sft-1-pythia-12b', trust_remote_code=True)
 
-request = {"prompt": "Once upon a time"}
+request = {"prompt": "<|prompter|>Who was Albert Einstein?<|endoftext|><|assistant|>"}
 
 input_sequence = tokenizer(
     request.get("prompt"), return_tensors="pt"
@@ -17,17 +17,9 @@ input_sequence = tokenizer(
 print(input_sequence)
 
 
-# Pass input sequence as list into the model
-outputs = model.generate(
-    **input_sequence,
-    num_beams=5,
-    num_return_sequences=5,
-    # prefix_allowed_tokens_fn=lambda batch_id, sent: trie.get(sent.tolist()),
-)
-
-print(outputs)
-# Decode model output to obtain entity candidates
-response = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-# result = jsonable_encoder(EntityDisambiguated(candidates=candidates))
-
+output = model.generate(**input_sequence, max_new_tokens=500, typical_p=0.2, 
+                        temperature=0.6, pad_token_id=tokenizer.eos_token_id,
+                        num_beams=5, num_return_sequences=5)
+print(output)
+response = tokenizer.batch_decode(output, skip_special_tokens=False)
 print(response)
